@@ -37,6 +37,29 @@ import json
 
 # --- LOGIN SIMPLES ---
 USUARIOS_PATH = "data/usuarios.json"
+
+# Função para criar arquivo CSV inicial para novo usuário
+def criar_arquivo_inicial_usuario(usuario):
+    """
+    Cria o arquivo CSV inicial para um novo usuário.
+    """
+    try:
+        data_path = f"data/dados_{usuario}.csv"
+        
+        # Criar DataFrame vazio com colunas padrão (usando a mesma abordagem do carregar_dados)
+        colunas = pd.Index(['Data', 'Descrição', 'Categoria', 'Tipo', 'Valor'])
+        df_inicial = pd.DataFrame(columns=colunas)
+        
+        # Salvar DataFrame vazio
+        salvar_dados(df_inicial, data_path)
+        
+        print(f"Arquivo inicial criado para usuário {usuario}: {data_path}")
+        return True
+        
+    except Exception as e:
+        print(f"ERRO ao criar arquivo inicial para {usuario}: {e}")
+        return False
+
 # Carregar usuários do arquivo, se existir
 if os.path.exists(USUARIOS_PATH):
     with open(USUARIOS_PATH, "r") as f:
@@ -91,9 +114,14 @@ if "usuario_logado" not in st.session_state:
                     USUARIOS[novo_usuario] = nova_senha
                     with open(USUARIOS_PATH, "w") as f:
                         json.dump(USUARIOS, f)
-                    st.session_state["usuario_logado"] = novo_usuario
-                    st.success("Conta criada e login realizado!")
-                    st.rerun()
+                    
+                    # Criar arquivo CSV inicial para o novo usuário
+                    if criar_arquivo_inicial_usuario(novo_usuario):
+                        st.session_state["usuario_logado"] = novo_usuario
+                        st.success("Conta criada e login realizado!")
+                        st.rerun()
+                    else:
+                        st.error("Erro ao criar arquivo de dados. Tente novamente.")
     
     st.stop()
 
@@ -114,15 +142,51 @@ menu = st.sidebar.selectbox("Selecione uma opção:", ["Resumo", "Novo Lançamen
 usuario = st.session_state["usuario_logado"]
 DATA_PATH = f"data/dados_{usuario}.csv"
 
+# Inicializar dados na session_state se não existir
+if 'df_dados' not in st.session_state:
+    st.session_state['df_dados'] = carregar_dados(DATA_PATH)
+
+# Função para atualizar dados na session_state
+def atualizar_dados():
+    st.session_state['df_dados'] = carregar_dados(DATA_PATH)
+
+# Função para sincronizar dados da session_state com o arquivo CSV
+def sincronizar_dados():
+    """
+    Garante que os dados da session_state estejam sincronizados com o arquivo CSV.
+    Útil para garantir persistência após operações de CRUD.
+    """
+    try:
+        # Recarregar dados do arquivo CSV
+        df_atual = carregar_dados(DATA_PATH)
+        
+        # Atualizar session_state
+        st.session_state['df_dados'] = df_atual
+        
+        print(f"Dados sincronizados: {len(df_atual)} registros")
+        return True
+        
+    except Exception as e:
+        print(f"ERRO na sincronização: {e}")
+        return False
+
+# Botão para atualizar dados manualmente
+if st.sidebar.button("🔄 Atualizar Dados"):
+    if sincronizar_dados():
+        st.sidebar.success("Dados sincronizados com sucesso!")
+    else:
+        st.sidebar.error("Erro ao sincronizar dados!")
+
 if menu == "Resumo":
     st.header("Resumo Financeiro")
     
-    # Carrega os dados
-    df = carregar_dados(DATA_PATH)
+    # Usar dados da session_state
+    df = st.session_state['df_dados']
     
     # Garantir que as colunas de filtro sejam categóricas
-    df['Categoria'] = df['Categoria'].astype('category')
-    df['Tipo'] = df['Tipo'].astype('category')
+    if len(df) > 0:
+        df['Categoria'] = df['Categoria'].astype('category')
+        df['Tipo'] = df['Tipo'].astype('category')
     
     # Calcula o somatório geral
     somatorio = calcular_somatorio_geral(df)
@@ -174,7 +238,7 @@ if menu == "Resumo":
         else:
             st.session_state['filtro_categoria_aberto'] = True
 
-    if st.session_state.get('filtro_categoria_aberto', False):
+    if st.session_state.get('filtro_categoria_aberto', False) and len(df) > 0:
         categorias_unicas = sorted(df['Categoria'].unique())
         # Estado para selecionar todas
         if 'todas_categorias_selecionadas' not in st.session_state:
@@ -201,23 +265,24 @@ if menu == "Resumo":
         if not categorias_selecionadas:
             categorias_selecionadas = categorias_unicas  # Se nada selecionado, mostra tudo
     else:
-        categorias_selecionadas = sorted(df['Categoria'].unique())
+        categorias_selecionadas = sorted(df['Categoria'].unique()) if len(df) > 0 else []
 
-    df_filtrado = df[df['Categoria'].isin(categorias_selecionadas)]
+    df_filtrado = df[df['Categoria'].isin(categorias_selecionadas)] if len(df) > 0 else df
 
     # Formatar valores numéricos e datas para exibição
     df_exibir = pd.DataFrame(df_filtrado)
-    if 'Valor' in df_exibir.columns:
-        df_exibir['Valor'] = df_exibir['Valor'].apply(lambda x: f"R$ {x:,.2f}")
-    if 'Data' in df_exibir.columns:
-        df_exibir['Data'] = pd.to_datetime(df_exibir['Data']).dt.strftime('%d/%m/%Y')
-    df_exibir = df_exibir.rename(columns={
-        "Data": "Data",
-        "Descrição": "Descrição",
-        "Categoria": "Categoria",
-        "Tipo": "Tipo",
-        "Valor": "Valor"
-    })
+    if len(df_exibir) > 0:
+        if 'Valor' in df_exibir.columns:
+            df_exibir['Valor'] = df_exibir['Valor'].apply(lambda x: f"R$ {x:,.2f}")
+        if 'Data' in df_exibir.columns:
+            df_exibir['Data'] = pd.to_datetime(df_exibir['Data']).dt.strftime('%d/%m/%Y')
+        df_exibir = df_exibir.rename(columns={
+            "Data": "Data",
+            "Descrição": "Descrição",
+            "Categoria": "Categoria",
+            "Tipo": "Tipo",
+            "Valor": "Valor"
+        })
     st.subheader("📋 Todos os Lançamentos")
     st.dataframe(
         df_exibir,
@@ -245,6 +310,7 @@ if menu == "Resumo":
         )
         if st.button("Confirmar exclusão", key='confirmar_excluir'):
             remover_lancamento(idx_excluir, DATA_PATH)
+            sincronizar_dados()  # Sincronizar dados após exclusão
             st.success("Lançamento excluído!")
             del st.session_state['excluir_aberto']
             st.rerun()
@@ -287,19 +353,21 @@ if menu == "Resumo":
             submit_edit = st.form_submit_button("Salvar alterações")
             if submit_edit:
                 editar_lancamento(editar_idx, data_edit, descricao_edit, categoria_edit, tipo_edit, valor_edit, DATA_PATH)
+                sincronizar_dados()  # Sincronizar dados após edição
                 st.success("Lançamento editado com sucesso!")
                 del st.session_state['editar_aberto']
                 del st.session_state['editar_idx']
                 st.rerun()
     
     # Gráficos um abaixo do outro, ocupando toda a largura
-    st.subheader("📈 Análise por Categoria")
-    st.write("**Receitas por categoria**")
-    fig_receitas = grafico_receitas_por_categoria(df)
-    st.pyplot(fig_receitas, use_container_width=True)
-    st.write("**Despesas por categoria**")
-    fig_despesas = grafico_despesas_por_categoria(df)
-    st.pyplot(fig_despesas, use_container_width=True)
+    if len(df) > 0:
+        st.subheader("📈 Análise por Categoria")
+        st.write("**Receitas por categoria**")
+        fig_receitas = grafico_receitas_por_categoria(df)
+        st.pyplot(fig_receitas, use_container_width=True)
+        st.write("**Despesas por categoria**")
+        fig_despesas = grafico_despesas_por_categoria(df)
+        st.pyplot(fig_despesas, use_container_width=True)
 
 elif menu == "Novo Lançamento":
     st.header("Adicionar novo lançamento")
@@ -340,6 +408,7 @@ elif menu == "Novo Lançamento":
         submit = st.form_submit_button("Adicionar")
         if submit:
             adicionar_lancamento(data, descricao, categoria, tipo, valor, DATA_PATH)
+            sincronizar_dados()  # Sincronizar dados após adição
             st.success("Lançamento adicionado!")
 
 elif menu == "Relatórios":

@@ -21,34 +21,76 @@ def carregar_dados(data_path):
     Carrega os dados financeiros do arquivo CSV.
     Retorna um DataFrame pandas.
     """
-    if os.path.exists(data_path):
-        df = pd.read_csv(data_path, parse_dates=['Data'])
-    else:
-        # Se não existir, retorna um DataFrame vazio com colunas padrão
+    try:
+        print(f"Tentando carregar dados de: {data_path}")
+        
+        if os.path.exists(data_path):
+            df = pd.read_csv(data_path, parse_dates=['Data'])
+            print(f"Dados carregados com sucesso: {len(df)} registros")
+            return df
+        else:
+            # Se não existir, retorna um DataFrame vazio com colunas padrão
+            print(f"Arquivo não existe. Criando DataFrame vazio.")
+            colunas = pd.Index(['Data', 'Descrição', 'Categoria', 'Tipo', 'Valor'])
+            df = pd.DataFrame(columns=colunas)
+            return df
+            
+    except Exception as e:
+        print(f"ERRO ao carregar dados: {e}")
+        # Em caso de erro, retorna DataFrame vazio
         colunas = pd.Index(['Data', 'Descrição', 'Categoria', 'Tipo', 'Valor'])
         df = pd.DataFrame(columns=colunas)
-    return df
+        return df
 
 def salvar_dados(df, data_path):
     """
     Salva o DataFrame no arquivo CSV.
     """
-    df.to_csv(data_path, index=False)
+    try:
+        # Garantir que o diretório existe
+        os.makedirs(os.path.dirname(data_path), exist_ok=True)
+        
+        # Salvar o DataFrame
+        df.to_csv(data_path, index=False)
+        
+        # Verificar se o arquivo foi criado/atualizado
+        if os.path.exists(data_path):
+            print(f"Dados salvos com sucesso em: {data_path}")
+            print(f"Total de registros salvos: {len(df)}")
+        else:
+            print(f"ERRO: Arquivo não foi criado em: {data_path}")
+            
+    except Exception as e:
+        print(f"ERRO ao salvar dados: {e}")
+        raise e
 
 def adicionar_lancamento(data, descricao, categoria, tipo, valor, data_path):
     """
     Adiciona um novo lançamento (receita ou despesa).
     """
-    df = carregar_dados(data_path)
-    novo = {
-        'Data': pd.to_datetime(data),
-        'Descrição': descricao,
-        'Categoria': categoria,
-        'Tipo': tipo,
-        'Valor': float(valor)
-    }
-    df = pd.concat([df, pd.DataFrame([novo])], ignore_index=True)
-    salvar_dados(df, data_path)
+    try:
+        print(f"Adicionando lançamento: {descricao} - {categoria} - {tipo} - R$ {valor}")
+        
+        df = carregar_dados(data_path)
+        print(f"Dados carregados: {len(df)} registros existentes")
+        
+        novo = {
+            'Data': pd.to_datetime(data),
+            'Descrição': descricao,
+            'Categoria': categoria,
+            'Tipo': tipo,
+            'Valor': float(valor)
+        }
+        
+        df = pd.concat([df, pd.DataFrame([novo])], ignore_index=True)
+        print(f"Novo DataFrame criado: {len(df)} registros")
+        
+        salvar_dados(df, data_path)
+        print(f"Lançamento adicionado com sucesso!")
+        
+    except Exception as e:
+        print(f"ERRO ao adicionar lançamento: {e}")
+        raise e
 
 def listar_lancamentos(data_path):
     """
@@ -60,21 +102,51 @@ def remover_lancamento(indice, data_path):
     """
     Remove um lançamento pelo índice (linha) no DataFrame.
     """
-    df = carregar_dados(data_path)
-    df = df.drop(indice).reset_index(drop=True)
-    salvar_dados(df, data_path)
+    try:
+        print(f"Removendo lançamento no índice: {indice}")
+        
+        df = carregar_dados(data_path)
+        print(f"Dados carregados: {len(df)} registros existentes")
+        
+        if indice < len(df):
+            df = df.drop(indice).reset_index(drop=True)
+            print(f"Lançamento removido. Novo total: {len(df)} registros")
+            salvar_dados(df, data_path)
+            print("Dados salvos após remoção!")
+        else:
+            print(f"ERRO: Índice {indice} não existe. Total de registros: {len(df)}")
+            
+    except Exception as e:
+        print(f"ERRO ao remover lançamento: {e}")
+        raise e
 
 def editar_lancamento(indice, data, descricao, categoria, tipo, valor, data_path):
     """
     Edita um lançamento existente pelo índice (linha).
     """
-    df = carregar_dados(data_path)
-    df.at[indice, 'Data'] = pd.to_datetime(data)
-    df.at[indice, 'Descrição'] = descricao
-    df.at[indice, 'Categoria'] = categoria
-    df.at[indice, 'Tipo'] = tipo
-    df.at[indice, 'Valor'] = float(valor)
-    salvar_dados(df, data_path)
+    try:
+        print(f"Editando lançamento no índice: {indice}")
+        print(f"Novos dados: {descricao} - {categoria} - {tipo} - R$ {valor}")
+        
+        df = carregar_dados(data_path)
+        print(f"Dados carregados: {len(df)} registros existentes")
+        
+        if indice < len(df):
+            df.at[indice, 'Data'] = pd.to_datetime(data)
+            df.at[indice, 'Descrição'] = descricao
+            df.at[indice, 'Categoria'] = categoria
+            df.at[indice, 'Tipo'] = tipo
+            df.at[indice, 'Valor'] = float(valor)
+            
+            print(f"Lançamento editado. Total de registros: {len(df)}")
+            salvar_dados(df, data_path)
+            print("Dados salvos após edição!")
+        else:
+            print(f"ERRO: Índice {indice} não existe. Total de registros: {len(df)}")
+            
+    except Exception as e:
+        print(f"ERRO ao editar lançamento: {e}")
+        raise e
 
 def filtrar_por_categoria(categoria, data_path):
     """
