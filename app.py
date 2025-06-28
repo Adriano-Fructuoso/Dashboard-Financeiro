@@ -35,13 +35,6 @@ import json
 # INÍCIO DO DASHBOARD FINANCEIRO
 # ==============================
 
-# Título e introdução
-st.title("Dashboard Financeiro Pessoal")
-st.write("Bem-vindo! Use o menu ao lado para navegar pelo seu financeiro.")
-
-# Sidebar para navegação e formulário de novos lançamentos
-menu = st.sidebar.selectbox("Selecione uma opção:", ["Resumo", "Novo Lançamento", "Relatórios"])
-
 # --- LOGIN SIMPLES ---
 USUARIOS_PATH = "data/usuarios.json"
 # Carregar usuários do arquivo, se existir
@@ -53,39 +46,70 @@ else:
     with open(USUARIOS_PATH, "w") as f:
         json.dump(USUARIOS, f)
 
+# Verificar se o usuário está logado
 if "usuario_logado" not in st.session_state:
-    st.title("Login")
-    aba = st.radio("Escolha uma opção:", ["Entrar", "Criar nova conta"])
-    if aba == "Entrar":
-        usuario = st.text_input("Nome de usuário")
-        senha = st.text_input("Senha", type="password")
-        if st.button("Entrar"):
-            if usuario and senha:
-                if usuario in USUARIOS and senha == USUARIOS[usuario]:
-                    st.session_state["usuario_logado"] = usuario
-                    st.success("Login realizado com sucesso!")
-                    st.rerun()
+    # Configurar página para login (sem sidebar)
+    st.set_page_config(
+        page_title="Login - Dashboard Financeiro",
+        page_icon="💰",
+        layout="centered"
+    )
+    
+    # Centralizar o formulário de login
+    st.title("💰 Dashboard Financeiro Pessoal")
+    st.markdown("---")
+    
+    # Criar duas colunas para centralizar o formulário
+    col1, col2, col3 = st.columns([1, 2, 1])
+    
+    with col2:
+        st.subheader("🔐 Login")
+        aba = st.radio("Escolha uma opção:", ["Entrar", "Criar nova conta"])
+        
+        if aba == "Entrar":
+            usuario = st.text_input("Nome de usuário")
+            senha = st.text_input("Senha", type="password")
+            if st.button("Entrar", use_container_width=True):
+                if usuario and senha:
+                    if usuario in USUARIOS and senha == USUARIOS[usuario]:
+                        st.session_state["usuario_logado"] = usuario
+                        st.success("Login realizado com sucesso!")
+                        st.rerun()
+                    else:
+                        st.error("Usuário ou senha incorretos")
                 else:
-                    st.error("Usuário ou senha incorretos")
-            else:
-                st.warning("Preencha usuário e senha.")
-        st.stop()
-    else:
-        novo_usuario = st.text_input("Novo nome de usuário")
-        nova_senha = st.text_input("Nova senha", type="password")
-        if st.button("Criar conta"):
-            if not novo_usuario or not nova_senha:
-                st.warning("Preencha usuário e senha.")
-            elif novo_usuario in USUARIOS:
-                st.error("Usuário já existe!")
-            else:
-                USUARIOS[novo_usuario] = nova_senha
-                with open(USUARIOS_PATH, "w") as f:
-                    json.dump(USUARIOS, f)
-                st.session_state["usuario_logado"] = novo_usuario
-                st.success("Conta criada e login realizado!")
-                st.rerun()
-        st.stop()
+                    st.warning("Preencha usuário e senha.")
+        else:
+            novo_usuario = st.text_input("Novo nome de usuário")
+            nova_senha = st.text_input("Nova senha", type="password")
+            if st.button("Criar conta", use_container_width=True):
+                if not novo_usuario or not nova_senha:
+                    st.warning("Preencha usuário e senha.")
+                elif novo_usuario in USUARIOS:
+                    st.error("Usuário já existe!")
+                else:
+                    USUARIOS[novo_usuario] = nova_senha
+                    with open(USUARIOS_PATH, "w") as f:
+                        json.dump(USUARIOS, f)
+                    st.session_state["usuario_logado"] = novo_usuario
+                    st.success("Conta criada e login realizado!")
+                    st.rerun()
+    
+    st.stop()
+
+# Após o login, configurar a página normal com sidebar
+st.set_page_config(
+    page_title="Dashboard Financeiro",
+    page_icon="💰",
+    layout="wide"
+)
+
+# Título e introdução
+st.title("Dashboard Financeiro Pessoal")
+st.write("Bem-vindo! Use o menu ao lado para navegar pelo seu financeiro.")
+
+# Sidebar para navegação e formulário de novos lançamentos (só aparece após login)
+menu = st.sidebar.selectbox("Selecione uma opção:", ["Resumo", "Novo Lançamento", "Relatórios"])
 
 usuario = st.session_state["usuario_logado"]
 DATA_PATH = f"data/dados_{usuario}.csv"
