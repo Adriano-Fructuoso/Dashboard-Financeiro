@@ -15,7 +15,8 @@ import pandas as pd
 import os
 import json
 from datetime import datetime, timedelta
-from config import USE_GOOGLE_SHEETS, GOOGLE_SPREADSHEET_ID
+from config import is_database_configured
+from utils.database import DatabaseManager
 
 # ==============================
 # CONFIGURAÇÕES E CONSTANTES
@@ -131,39 +132,29 @@ def aplicar_css_personalizado():
     </style>
     """, unsafe_allow_html=True)
 
-def criar_arquivo_inicial_usuario(usuario):
-    """Cria arquivo CSV inicial para novo usuário ou aba no Google Sheets"""
+def criar_usuario_inicial(usuario: str, senha: str) -> bool:
+    """Cria um novo usuário no banco de dados"""
     try:
-        if USE_GOOGLE_SHEETS and GOOGLE_SPREADSHEET_ID:
-            from utils.google_sheets import ensure_user_sheet_exists
-            ensure_user_sheet_exists(GOOGLE_SPREADSHEET_ID, usuario)
-            return True
-        else:
-            data_path = f"data/dados_{usuario}.csv"
-            colunas = pd.Index(['Data', 'Descrição', 'Categoria', 'Tipo', 'Valor'])
-            df_inicial = pd.DataFrame(columns=colunas)
-            salvar_dados(df_inicial, data_path, usuario)
-            return True
+        with DatabaseManager() as db:
+            success = db.create_user(usuario, senha)
+            if success:
+                st.success(f"Usuário '{usuario}' criado com sucesso!")
+                return True
+            else:
+                st.error("Erro ao criar usuário")
+                return False
     except Exception as e:
-        st.error(f"Erro ao criar arquivo inicial: {e}")
+        st.error(f"Erro ao criar usuário: {e}")
         return False
 
-def carregar_usuarios():
-    """Carrega usuários do arquivo JSON"""
-    usuarios_path = "data/usuarios.json"
-    if os.path.exists(usuarios_path):
-        with open(usuarios_path, "r") as f:
-            return json.load(f)
-    else:
-        usuarios_padrao = {"Adriano": "142536"}
-        with open(usuarios_path, "w") as f:
-            json.dump(usuarios_padrao, f)
-        return usuarios_padrao
-
-def salvar_usuarios(usuarios):
-    """Salva usuários no arquivo JSON"""
-    with open("data/usuarios.json", "w") as f:
-        json.dump(usuarios, f)
+def verificar_credenciais(usuario: str, senha: str) -> bool:
+    """Verifica as credenciais do usuário"""
+    try:
+        with DatabaseManager() as db:
+            return db.verify_user_password(usuario, senha)
+    except Exception as e:
+        st.error(f"Erro ao verificar credenciais: {e}")
+        return False
 
 def formatar_moeda(valor):
     """Formata valor como moeda brasileira"""
@@ -194,78 +185,55 @@ def criar_metric_card(label, value, delta=None, delta_color="normal"):
 def mostrar_tela_login():
     """Exibe tela de login e cadastro de usuário"""
     st.title("🔐 Login no Dashboard Financeiro")
+    
+    # Verificar se o banco está configurado
+    if not is_database_configured():
+        st.error("⚠️ Banco de dados não configurado!")
+        st.info("Configure as variáveis de ambiente:")
+        st.code("""
+        # Para Supabase
+        SUPABASE_URL=sua_url_do_supabase
+        SUPABASE_KEY=sua_chave_do_supabase
+        
+        # Ou para PostgreSQL local
+        DATABASE_URL=postgresql://usuario:senha@localhost:5432/dashboard_financeiro
+        """)
+        return False
+    
     aba = st.radio("Acesso", ["Entrar", "Criar Conta"], horizontal=True)
 
     if aba == "Entrar":
         usuario = st.text_input("Nome de usuário", key="login_usuario")
-        if st.button("Entrar", use_container_width=True):
-            if not usuario or not usuario.strip():
-                st.warning("Digite um nome de usuário válido.")
-                return
-            # Tenta carregar dados da aba do usuário
-            if USE_GOOGLE_SHEETS and GOOGLE_SPREADSHEET_ID:
-                from utils.google_sheets import get_gspread_client
-                try:
-                    client = get_gspread_client()
-                    spreadsheet = client.open_by_key(GOOGLE_SPREADSHEET_ID)
-                    try:
-                        spreadsheet.worksheet(usuario)
-                        st.session_state["usuario_logado"] = usuario
-                        st.success(f"Bem-vindo, {usuario}!")
-                        st.rerun()
-                    except Exception:
-                        st.error("Usuário não encontrado. Faça o cadastro primeiro.")
-                        return
-                except Exception as e:
-                    st.error(f"Erro ao acessar Google Sheets: {e}")
-                    return
-            else:
-                # CSV: verifica se arquivo existe
-                data_path = f"data/dados_{usuario}.csv"
-                if os.path.exists(data_path):
-                    st.session_state["usuario_logado"] = usuario
+        senha = st.text_input("Senha", type="password", key="login_senha")
+        
+        if st.button("Entrar", type="primary"):
+            if usuario and senha:
+                if verificar_credenciais(usuario, senha):
+                    st.session_state.usuario_logado = usuario
                     st.success(f"Bem-vindo, {usuario}!")
                     st.rerun()
                 else:
-                    st.error("Usuário não encontrado. Faça o cadastro primeiro.")
-                    return
-    else:
-        usuario = st.text_input("Nome de usuário para cadastro", key="cadastro_usuario")
-        if st.button("Criar Conta", use_container_width=True):
-            if not usuario or not usuario.strip():
-                st.warning("Digite um nome de usuário válido.")
-                return
-            # Verifica se já existe aba/usuário
-            if USE_GOOGLE_SHEETS and GOOGLE_SPREADSHEET_ID:
-                from utils.google_sheets import get_gspread_client
-                try:
-                    client = get_gspread_client()
-                    spreadsheet = client.open_by_key(GOOGLE_SPREADSHEET_ID)
-                    try:
-                        spreadsheet.worksheet(usuario)
-                        st.error("Usuário já existe. Escolha outro nome.")
-                        return
-                    except Exception:
-                        # Não existe, pode criar
-                        criado = criar_arquivo_inicial_usuario(usuario)
-                        if criado:
-                            st.success(f"Conta criada para {usuario}! Faça login para acessar.")
-                        else:
-                            st.error("Erro ao criar conta. Tente novamente.")
-                except Exception as e:
-                    st.error(f"Erro ao acessar Google Sheets: {e}")
-                    return
+                    st.error("Usuário ou senha incorretos!")
             else:
-                # CSV: verifica se arquivo existe
-                data_path = f"data/dados_{usuario}.csv"
-                if os.path.exists(data_path):
-                    st.error("Usuário já existe. Escolha outro nome.")
-                    return
-                criado = criar_arquivo_inicial_usuario(usuario)
-                if criado:
-                    st.success(f"Conta criada para {usuario}! Faça login para acessar.")
+                st.warning("Preencha todos os campos!")
+
+    else:  # Criar Conta
+        novo_usuario = st.text_input("Nome de usuário", key="novo_usuario")
+        nova_senha = st.text_input("Senha", type="password", key="nova_senha")
+        confirmar_senha = st.text_input("Confirmar senha", type="password", key="confirmar_senha")
+        
+        if st.button("Criar Conta", type="primary"):
+            if novo_usuario and nova_senha and confirmar_senha:
+                if nova_senha == confirmar_senha:
+                    if criar_usuario_inicial(novo_usuario, nova_senha):
+                        st.session_state.usuario_logado = novo_usuario
+                        st.rerun()
                 else:
-                    st.error("Erro ao criar conta. Tente novamente.")
+                    st.error("As senhas não coincidem!")
+            else:
+                st.warning("Preencha todos os campos!")
+    
+    return False
 
 # ==============================
 # DASHBOARD PRINCIPAL
@@ -317,16 +285,10 @@ def mostrar_sidebar():
     return menu
 
 def sincronizar_dados():
-    """Sincroniza dados da session_state com arquivo CSV ou Google Sheets"""
+    """Sincroniza dados da session_state com o banco de dados"""
     try:
         usuario = st.session_state["usuario_logado"]
-        
-        if USE_GOOGLE_SHEETS and GOOGLE_SPREADSHEET_ID:
-            df_atual = carregar_dados(usuario=usuario)
-        else:
-            data_path = f"data/dados_{usuario}.csv"
-            df_atual = carregar_dados(data_path, usuario)
-        
+        df_atual = carregar_dados(usuario=usuario)
         st.session_state['df_dados'] = df_atual
         st.success("✅ Dados atualizados!")
         return True
@@ -346,7 +308,10 @@ def mostrar_resumo():
     
     # Métricas principais
     somatorio = calcular_somatorio_geral(df)
-    total_investimentos = float(df[df['Categoria'] == 'Investimentos']['Valor'].sum())
+    if 'Categoria' in df.columns and 'Valor' in df.columns:
+        total_investimentos = float(df[df['Categoria'] == 'Investimentos']['Valor'].sum())
+    else:
+        total_investimentos = 0.0
     
     col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
     
@@ -800,11 +765,7 @@ def main():
         st.session_state['usuario_anterior'] != usuario_atual):
         
         try:
-            if USE_GOOGLE_SHEETS and GOOGLE_SPREADSHEET_ID:
-                st.session_state['df_dados'] = carregar_dados(usuario=usuario_atual)
-            else:
-                data_path = f"data/dados_{usuario_atual}.csv"
-                st.session_state['df_dados'] = carregar_dados(data_path, usuario_atual)
+            st.session_state['df_dados'] = carregar_dados(usuario=usuario_atual)
             
             # Marcar o usuário atual para evitar recargas desnecessárias
             st.session_state['usuario_anterior'] = usuario_atual
