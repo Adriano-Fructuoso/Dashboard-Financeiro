@@ -46,6 +46,7 @@ def carregar_dados(data_path: Optional[str] = None, usuario: Optional[str] = Non
                 
                 # Usar nome do usuário como nome da aba, ou padrão se não fornecido
                 sheet_name = usuario if usuario else GOOGLE_SHEET_NAME
+                logger.info(f"Usando aba: '{sheet_name}' para usuário: '{usuario}'")
                 
                 # Garantir que a aba existe
                 ensure_user_sheet_exists(GOOGLE_SPREADSHEET_ID, sheet_name)
@@ -60,6 +61,7 @@ def carregar_dados(data_path: Optional[str] = None, usuario: Optional[str] = Non
                 logger.info("Fallback para CSV")
                 df = _carregar_csv(data_path)
         else:
+            logger.info(f"Usando CSV: {data_path}")
             df = _carregar_csv(data_path)
         
         # Validar estrutura do DataFrame

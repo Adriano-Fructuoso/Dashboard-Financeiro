@@ -221,7 +221,7 @@ def grafico_saldo_ao_longo_do_tempo(df: pd.DataFrame) -> Figure:
         axis=1
     )
     df_sorted['Saldo Acumulado'] = df_sorted['Valor Ajustado'].cumsum()
-    
+
     # Criar figura
     fig, ax = plt.subplots(figsize=(14, 8))
     

@@ -1,11 +1,10 @@
 # 💰 Dashboard Financeiro Pessoal
 
-Um dashboard moderno e eficiente para controle financeiro pessoal, desenvolvido com Python e Streamlit. Agora com suporte a **Google Sheets** como banco de dados e sistema multi-usuário!
+Um dashboard moderno e eficiente para controle financeiro pessoal, desenvolvido com Python e Streamlit. Agora com suporte a **Google Sheets** como banco de dados!
 
 ![Dashboard Financeiro](https://img.shields.io/badge/Status-Produção-brightgreen)
 ![Python](https://img.shields.io/badge/Python-3.9+-blue)
 ![Streamlit](https://img.shields.io/badge/Streamlit-1.46+-red)
-![Google Sheets](https://img.shields.io/badge/Google%20Sheets-API-orange)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
 ## 🚀 Características
@@ -16,12 +15,6 @@ Um dashboard moderno e eficiente para controle financeiro pessoal, desenvolvido 
 - **Navegação fluida** com sidebar organizada
 - **Cards de métricas** visuais e informativos
 
-### 🔐 Sistema Multi-Usuário
-- **Login/Cadastro** completo com autenticação
-- **Isolamento de dados** - cada usuário tem sua própria aba no Google Sheets
-- **Privacidade total** - usuários não podem ver dados de outros
-- **Criação automática** de abas para novos usuários
-
 ### 📊 Funcionalidades Principais
 - **Sistema de login** com múltiplos usuários
 - **Gestão completa** de receitas e despesas
@@ -29,7 +22,6 @@ Um dashboard moderno e eficiente para controle financeiro pessoal, desenvolvido 
 - **Filtros avançados** por período e categoria
 - **Relatórios mensais** com comparações
 - **Gráficos interativos** e informativos
-- **Sincronização automática** com Google Sheets
 
 ### 📈 Análises e Relatórios
 - **Resumo financeiro** em tempo real
@@ -43,31 +35,23 @@ Um dashboard moderno e eficiente para controle financeiro pessoal, desenvolvido 
 - **Validação robusta** de dados
 - **Tratamento de erros** elegante
 - **Performance otimizada** para grandes volumes
-- **Persistência segura** no Google Sheets
-- **Backup automático** e sincronização
+- **Persistência segura** em arquivos CSV
+- **Logging detalhado** para debugging
 
 ## 🛠️ Tecnologias Utilizadas
 
 - **Python 3.9+** - Linguagem principal
 - **Streamlit** - Framework web para dashboards
-- **Google Sheets API** - Armazenamento e sincronização
 - **Pandas** - Manipulação e análise de dados
-- **Plotly** - Gráficos interativos
 - **Matplotlib** - Geração de gráficos
+- **Seaborn** - Estilização de gráficos
 - **NumPy** - Computação numérica
 
 ## 📦 Instalação
 
 ### Pré-requisitos
 - Python 3.9 ou superior
-- Conta Google com Google Sheets
-- Credenciais da Google Sheets API
-
-### Configuração do Google Sheets
-
-1. **Siga o guia completo** em `GOOGLE_SHEETS_SETUP.md`
-2. **Configure as credenciais** no arquivo `config.py`
-3. **Compartilhe sua planilha** com o email da conta de serviço
+- pip (gerenciador de pacotes Python)
 
 ### Passos para Instalação
 
@@ -96,16 +80,12 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-5. **Configure as credenciais**
-   - Edite `config.py` com suas configurações
-   - Configure o `GOOGLE_SPREADSHEET_ID`
-
-6. **Execute o aplicativo**
+5. **Execute o aplicativo**
 ```bash
 streamlit run app.py
 ```
 
-7. **Acesse no navegador**
+6. **Acesse no navegador**
 ```
 http://localhost:8501
 ```
@@ -116,8 +96,7 @@ http://localhost:8501
 1. Acesse o dashboard no navegador
 2. Clique em "Nova Conta" para criar seu usuário
 3. Defina um nome de usuário e senha
-4. Sistema criará automaticamente sua aba no Google Sheets
-5. Faça login com suas credenciais
+4. Faça login com suas credenciais
 
 ### Adicionando Lançamentos
 1. Vá para "➕ Novo Lançamento"
@@ -128,7 +107,6 @@ http://localhost:8501
    - **Categoria**: Categoria pré-definida
    - **Valor**: Valor em reais
 3. Clique em "Adicionar Lançamento"
-4. Dados são salvos automaticamente na sua aba
 
 ### Visualizando Relatórios
 1. **Resumo**: Visão geral das finanças
@@ -145,58 +123,49 @@ http://localhost:8501
 ```
 dashboard-financeiro/
 ├── app.py                 # Aplicação principal
-├── config.py             # Configurações e credenciais
 ├── requirements.txt       # Dependências
 ├── README.md             # Documentação
-├── GOOGLE_SHEETS_SETUP.md # Guia de configuração
 ├── data/                 # Dados dos usuários
 │   ├── usuarios.json     # Usuários cadastrados
-│   └── dados_*.csv       # Backup local dos dados
+│   └── dados_*.csv       # Dados financeiros por usuário
 ├── finance/              # Módulos de lógica
 │   ├── __init__.py
 │   ├── core.py          # Lógica de negócio
 │   └── charts.py        # Geração de gráficos
 └── utils/               # Utilitários
-    ├── __init__.py
-    └── google_sheets.py # Integração Google Sheets
+    └── __init__.py
 ```
 
 ## 🔧 Configuração
 
-### Google Sheets Setup
-1. **Crie um projeto** no Google Cloud Console
-2. **Ative a Google Sheets API**
-3. **Crie credenciais** de conta de serviço
-4. **Compartilhe sua planilha** com o email da conta de serviço
-5. **Configure o SPREADSHEET_ID** no `config.py`
+### Variáveis de Ambiente
+O projeto não requer variáveis de ambiente especiais, mas você pode configurar:
 
-### Estrutura da Planilha
-- **Cada usuário tem sua própria aba**
-- **Colunas padrão**: Data, Descrição, Categoria, Tipo, Valor
-- **Sistema cria abas automaticamente** para novos usuários
-- **Sincronização automática** entre aplicação e planilha
+```bash
+# Porta do Streamlit (opcional)
+export STREAMLIT_SERVER_PORT=8501
 
-### Variáveis de Configuração
-```python
-# config.py
-USE_GOOGLE_SHEETS = True
-GOOGLE_SPREADSHEET_ID = "seu-spreadsheet-id"
-GOOGLE_SHEET_NAME = "Adriano"  # Aba padrão
+# Configurações de cache (opcional)
+export STREAMLIT_CACHE_TTL=3600
 ```
+
+### Personalização
+- **Cores**: Edite o dicionário `COLORS` em `app.py`
+- **Categorias**: Modifique `CATEGORIAS` em `app.py`
+- **Gráficos**: Ajuste estilos em `finance/charts.py`
 
 ## 📊 Funcionalidades Detalhadas
 
-### Sistema Multi-Usuário
-- **Múltiplos usuários** com dados completamente isolados
-- **Autenticação segura** com nome/senha
-- **Criação automática** de abas no Google Sheets
-- **Privacidade total** - cada usuário só vê seus dados
+### Sistema de Usuários
+- **Múltiplos usuários** com dados isolados
+- **Autenticação simples** com nome/senha
+- **Criação automática** de arquivos de dados
+- **Persistência** em arquivo JSON
 
 ### Gestão de Dados
 - **CRUD completo** (Criar, Ler, Atualizar, Deletar)
 - **Validação de dados** em tempo real
-- **Sincronização automática** com Google Sheets
-- **Backup local** em arquivos CSV
+- **Backup automático** em arquivos CSV
 - **Exportação** de dados para análise externa
 
 ### Análises Financeiras
@@ -204,7 +173,6 @@ GOOGLE_SHEET_NAME = "Adriano"  # Aba padrão
 - **Categorização inteligente** de gastos
 - **Tendências mensais** e sazonais
 - **Comparativos** entre períodos
-- **Relatórios avançados** com gráficos
 
 ## 🚀 Deploy
 
@@ -219,9 +187,7 @@ streamlit run app.py
 web: streamlit run app.py --server.port=$PORT --server.address=0.0.0.0
 ```
 
-2. Configure as variáveis de ambiente no Heroku:
-   - `GOOGLE_SPREADSHEET_ID`
-   - `GOOGLE_CREDENTIALS_JSON`
+2. Configure as variáveis de ambiente no Heroku
 
 ### Docker
 ```dockerfile
@@ -232,54 +198,43 @@ COPY requirements.txt .
 RUN pip install -r requirements.txt
 
 COPY . .
+
 EXPOSE 8501
 
 CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]
 ```
 
-## 🔒 Segurança
+## 🤝 Contribuindo
 
-- **Isolamento de Dados**: Cada usuário só acessa seus próprios dados
-- **Autenticação**: Sistema de login/cadastro
-- **Privacidade**: Nenhum usuário pode ver dados de outros
-- **Backup**: Dados sincronizados automaticamente no Google Sheets
+1. **Fork** o projeto
+2. Crie uma **branch** para sua feature (`git checkout -b feature/AmazingFeature`)
+3. **Commit** suas mudanças (`git commit -m 'Add some AmazingFeature'`)
+4. **Push** para a branch (`git push origin feature/AmazingFeature`)
+5. Abra um **Pull Request**
 
-## 🤝 Contribuição
+### Padrões de Código
+- Use **type hints** em todas as funções
+- Documente funções com **docstrings**
+- Siga o padrão **PEP 8**
+- Teste suas mudanças antes de submeter
 
-1. Fork o projeto
-2. Crie uma branch para sua feature
-3. Commit suas mudanças
-4. Push para a branch
-5. Abra um Pull Request
+## 📝 Changelog
+
+### v2.0.0 (Atual)
+- ✨ Interface completamente redesenhada
+- 🚀 Performance otimizada
+- 📊 Gráficos modernos e interativos
+- 🔧 Validação robusta de dados
+- 📱 Design responsivo
+- 🎨 Tema personalizado
+
+### v1.0.0
+- 📊 Dashboard básico
+- 👤 Sistema de login
+- 💰 Gestão de receitas e despesas
+- 📈 Gráficos simples
 
 ## 📄 Licença
-
-Este projeto está sob a licença MIT. Veja o arquivo `LICENSE` para mais detalhes.
-
-## 🆘 Suporte
-
-Para dúvidas ou problemas:
-- Abra uma issue no GitHub
-- Consulte a documentação em `GOOGLE_SHEETS_SETUP.md`
-
-## 🔄 Changelog
-
-### v2.0.0 - Sistema Multi-Usuário com Google Sheets
-- ✅ Sistema completo de login/cadastro
-- ✅ Isolamento de dados por usuário
-- ✅ Integração com Google Sheets por aba
-- ✅ Interface moderna e responsiva
-- ✅ Relatórios avançados
-- ✅ Sistema de backup automático
-- ✅ Sincronização em tempo real
-
-### v1.0.0 - Versão Inicial
-- ✅ Dashboard básico
-- ✅ CRUD de lançamentos
-- ✅ Gráficos simples
-- ✅ Integração CSV
-
-## 📝 Licença
 
 Este projeto está licenciado sob a Licença MIT - veja o arquivo [LICENSE](LICENSE) para detalhes.
 
