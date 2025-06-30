@@ -1,12 +1,25 @@
-#	•	O que vai aqui:
-#Lista de dependências do projeto.
-#	•	Responsabilidades:
-#	•	Ter os nomes dos pacotes que o projeto precisa para rodar (Ex: streamlit, pandas, etc).
-#	•	Facilitar a instalação do projeto em outro computador/servidor.
-#	•	Exemplo de conteúdo inicial:
+# Dashboard Financeiro Pessoal - Dependências
+# Versões otimizadas e testadas
 
+# Framework principal
+streamlit>=1.46.0,<2.0.0
 
-streamlit
-pandas
-matplotlib
-numpy
+# Manipulação e análise de dados
+pandas>=2.0.0,<3.0.0
+numpy>=1.24.0,<2.0.0
+
+# Visualização de dados
+matplotlib>=3.7.0,<4.0.0
+seaborn>=0.12.0,<1.0.0
+
+# Utilitários
+python-dateutil>=2.8.0,<3.0.0
+pytz>=2023.3
+
+# Desenvolvimento (opcional)
+# pytest>=7.0.0,<8.0.0
+# black>=23.0.0,<24.0.0
+# flake8>=6.0.0,<7.0.0
+
+gspread
+google-auth

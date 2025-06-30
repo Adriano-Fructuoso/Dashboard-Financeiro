@@ -1,0 +1,72 @@
+# Google Sheets credentials
+google-credentials.json
+.env
+
+# Dados sensíveis
+data/usuarios.json
+data/dados_*.csv
+
+# Arquivos de exemplo (não versionar)
+config.example.py
+google-credentials.example.json
+
+# Scripts de teste e desenvolvimento
+test_google_sheets.py
+adicionar_lancamentos_*.py
+migrate_to_sheets.py
+verificar_abas.py
+teste_*.py
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Streamlit
+.streamlit/
+
+# Logs
+*.log
+
+# Arquivos temporários
+*.tmp
+*.temp
+
+# Streamlit
+.streamlit/
+
+# Logs
+*.log 
