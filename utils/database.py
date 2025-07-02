@@ -26,12 +26,12 @@ class DatabaseManager:
     def connect(self):
         """Estabelece conexão com o banco de dados"""
         try:
-            # Tentar conectar via Supabase primeiro
-            supabase_url = os.getenv('SUPABASE_URL')
-            supabase_key = os.getenv('SUPABASE_KEY')
+            # Importar configurações do config.py
+            from config import SUPABASE_URL, SUPABASE_KEY
             
-            if supabase_url and supabase_key:
-                self.supabase_client = create_client(supabase_url, supabase_key)
+            # Tentar conectar via Supabase primeiro
+            if SUPABASE_URL and SUPABASE_KEY:
+                self.supabase_client = create_client(SUPABASE_URL, SUPABASE_KEY)
                 self.use_supabase = True
                 logger.info("Conectado ao Supabase via cliente oficial")
                 return

@@ -91,13 +91,13 @@ Thumbs.db
 # =====================================================
 # Manter apenas os scripts essenciais para produção
 test_*.py
-*_teste*.py
+*_teste*.py 
 *_test*.py
 teste_*.py
 adicionar_*.py
 insert_*.py
 migrate_*.py
-setup_*.py
+# setup_*.py  # Comentado para permitir setup_usuario_adriano.py
 limpar_*.py
 executar_*.py
 
