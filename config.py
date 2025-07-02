@@ -6,8 +6,18 @@ import os
 from typing import Optional
 
 # Configurações do Supabase/PostgreSQL
-SUPABASE_URL = os.getenv('SUPABASE_URL', '')
-SUPABASE_KEY = os.getenv('SUPABASE_KEY', '')
+# Tenta ler do Streamlit secrets primeiro, depois das variáveis de ambiente
+try:
+    import streamlit as st
+    SUPABASE_URL = st.secrets.get("SUPABASE", {}).get("SUPABASE_URL") or os.getenv('SUPABASE_URL', '')
+    SUPABASE_KEY = st.secrets.get("SUPABASE", {}).get("SUPABASE_KEY") or os.getenv('SUPABASE_KEY', '')
+    SUPABASE_SERVICE_KEY = st.secrets.get("SUPABASE", {}).get("SUPABASE_SERVICE_KEY") or os.getenv('SUPABASE_SERVICE_KEY', '')
+except:
+    # Fallback para variáveis de ambiente (desenvolvimento local)
+    SUPABASE_URL = os.getenv('SUPABASE_URL', '')
+    SUPABASE_KEY = os.getenv('SUPABASE_KEY', '')
+    SUPABASE_SERVICE_KEY = os.getenv('SUPABASE_SERVICE_KEY', '')
+
 DATABASE_URL = os.getenv('DATABASE_URL', '')
 
 # Configurações da aplicação
