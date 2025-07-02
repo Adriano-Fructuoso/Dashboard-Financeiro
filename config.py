@@ -5,14 +5,10 @@ Configurações do Dashboard Financeiro
 import os
 from typing import Optional
 
-# Configurações do Google Sheets
-USE_GOOGLE_SHEETS = os.getenv('USE_GOOGLE_SHEETS', 'false').lower() == 'true'
-GOOGLE_SPREADSHEET_ID = os.getenv('GOOGLE_SPREADSHEET_ID', '')
-GOOGLE_SHEET_NAME = os.getenv('GOOGLE_SHEET_NAME', 'Lancamentos')
-GOOGLE_CREDENTIALS_FILE = os.getenv('GOOGLE_CREDENTIALS_FILE', 'google-credentials.json')
-
-# Configurações de dados
-DEFAULT_CSV_FILE = 'data/dados_Adriano.csv'
+# Configurações do Supabase/PostgreSQL
+SUPABASE_URL = os.getenv('SUPABASE_URL', '')
+SUPABASE_KEY = os.getenv('SUPABASE_KEY', '')
+DATABASE_URL = os.getenv('DATABASE_URL', '')
 
 # Configurações da aplicação
 APP_TITLE = "📊 Dashboard Financeiro"
@@ -41,17 +37,13 @@ CATEGORIAS_DESPESA = [
 
 def get_data_source() -> str:
     """Retorna a fonte de dados atual"""
-    if USE_GOOGLE_SHEETS and GOOGLE_SPREADSHEET_ID:
-        return f"Google Sheets ({GOOGLE_SPREADSHEET_ID})"
+    if SUPABASE_URL and SUPABASE_KEY:
+        return f"Supabase ({SUPABASE_URL})"
+    elif DATABASE_URL:
+        return "PostgreSQL"
     else:
-        return f"CSV ({DEFAULT_CSV_FILE})"
+        return "Configuração de banco não encontrada"
 
-def is_google_sheets_enabled() -> bool:
-    """Verifica se o Google Sheets está habilitado e configurado"""
-    return USE_GOOGLE_SHEETS and bool(GOOGLE_SPREADSHEET_ID) and os.path.exists(GOOGLE_CREDENTIALS_FILE)
-
-def get_spreadsheet_url() -> Optional[str]:
-    """Retorna a URL da planilha do Google Sheets"""
-    if GOOGLE_SPREADSHEET_ID:
-        return f"https://docs.google.com/spreadsheets/d/{GOOGLE_SPREADSHEET_ID}"
-    return None 
+def is_database_configured() -> bool:
+    """Verifica se o banco de dados está configurado"""
+    return bool(SUPABASE_URL and SUPABASE_KEY) or bool(DATABASE_URL) 

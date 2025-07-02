@@ -1,0 +1,47 @@
+# =====================================================
+# CONFIGURAÇÃO STREAMLIT - DASHBOARD FINANCEIRO
+# =====================================================
+
+[server]
+# Configurações do servidor
+port = 8501
+address = "0.0.0.0"
+enableCORS = false
+enableXsrfProtection = true
+maxUploadSize = 200
+headless = true
+
+[browser]
+# Configurações do navegador
+gatherUsageStats = false
+serverAddress = "localhost"
+serverPort = 8501
+
+[theme]
+# Tema personalizado
+primaryColor = "#1f77b4"
+backgroundColor = "#ffffff"
+secondaryBackgroundColor = "#f0f2f6"
+textColor = "#262730"
+font = "sans serif"
+
+[logger]
+# Configurações de log
+level = "info"
+messageFormat = "%(asctime)s %(message)s"
+
+[client]
+# Configurações do cliente
+showErrorDetails = false
+toolbarMode = "minimal"
+
+[runner]
+# Configurações do runner
+magicEnabled = true
+installTracer = false
+fixMatplotlib = true
+
+[global]
+# Configurações globais
+developmentMode = false
+showWarningOnDirectExecution = true 

@@ -1,8 +1,26 @@
-# Google Sheets credentials
-google-credentials.json
-.env
+# =====================================================
+# GITIGNORE - DASHBOARD FINANCEIRO
+# =====================================================
 
-# Python
+# =====================================================
+# 1. ARQUIVOS DE CONFIGURAÇÃO SENSÍVEIS
+# =====================================================
+.env
+.env.local
+.env.production
+.env.staging
+*.key
+*.pem
+*.p12
+
+# =====================================================
+# 2. AMBIENTE VIRTUAL E DEPENDÊNCIAS
+# =====================================================
+venv/
+env/
+ENV/
+.venv/
+.ENV/
 __pycache__/
 *.py[cod]
 *$py.class
@@ -23,25 +41,340 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-MANIFEST
 
-# Virtual environments
-venv/
-env/
-ENV/
+# =====================================================
+# 3. DADOS SENSÍVEIS E ARQUIVOS DE TESTE
+# =====================================================
+data/*.csv
+data/*.json
+data/*.xlsx
+data/*.xls
+*.csv
+*.json
+*.xlsx
+*.xls
 
-# IDE
+# =====================================================
+# 4. LOGS E ARQUIVOS TEMPORÁRIOS
+# =====================================================
+*.log
+*.tmp
+*.temp
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# =====================================================
+# 5. IDEs E EDITORES
+# =====================================================
 .vscode/
 .idea/
 *.swp
 *.swo
+*~
+.project
+.classpath
+.settings/
 
-# OS
-.DS_Store
+# =====================================================
+# 6. STREAMLIT
+# =====================================================
+.streamlit/secrets.toml
+# .streamlit/  # Comentado para permitir config.toml
+
+# =====================================================
+# 7. SCRIPTS DE DESENVOLVIMENTO E TESTE
+# =====================================================
+# Manter apenas os scripts essenciais para produção
+test_*.py
+*_teste*.py
+*_test*.py
+teste_*.py
+adicionar_*.py
+insert_*.py
+migrate_*.py
+setup_*.py
+limpar_*.py
+executar_*.py
+
+# =====================================================
+# 8. ARQUIVOS SQL DE DESENVOLVIMENTO
+# =====================================================
+# Manter apenas o SQL final de produção
+setup_*.sql
+insert_*.sql
+test_*.sql
+# limpar_*.sql  # Comentado para permitir o SQL final
+
+# =====================================================
+# 9. DOCUMENTAÇÃO TEMPORÁRIA
+# =====================================================
+*.md.bak
+*.txt.bak
+temp_*.md
+draft_*.md
+
+# =====================================================
+# 10. BACKUPS E CÓPIAS
+# =====================================================
+*.bak
+*.backup
+*.old
+*_old.*
+*_backup.*
+
+# =====================================================
+# 11. ARQUIVOS DE SISTEMA
+# =====================================================
+*.pid
+*.seed
+*.pid.lock
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# =====================================================
+# 12. CACHE E ARQUIVOS DE PERFORMANCE
+# =====================================================
+.cache/
+.parcel-cache/
+.next/
+.nuxt/
+dist/
+.cache
+.nyc_output
+coverage/
+*.lcov
+
+# =====================================================
+# 13. ARQUIVOS DE DEPLOY TEMPORÁRIOS
+# =====================================================
+deploy/
+deployment/
+*.tar.gz
+*.zip
+*.rar
+
+# =====================================================
+# 14. ARQUIVOS DE CONFIGURAÇÃO LOCAL
+# =====================================================
+config.local.py
+settings.local.py
+local_config.py
+
+# Google Sheets credentials
+google-credentials.json
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Flask stuff:
+instance/
+.webassets-cache
+
+# Scrapy stuff:
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+.pybuilder/
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# poetry
+poetry.lock
+
+# pdm
+.pdm.toml
+
+# PEP 582
+__pypackages__/
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# pytype static type analyzer
+.pytype/
+
+# Cython debug symbols
+cython_debug/
+
+# VS Code
+.vscode/
+
+# macOS
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Windows
 Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
 
-# Streamlit
-.streamlit/
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# Project specific
+# Dados sensíveis
+data/*.csv
+data/*.json
+data/usuarios.json
 
 # Logs
-*.log 
+logs/
+
+# Arquivos temporários de teste
+test_*.py
+*_teste.py
+teste_*.py
+
+# Arquivos de setup temporários
+setup_*.py
+*_setup.py
+
+# Arquivos de migração temporários
+migrate_*.py
+*_migrate.py
+
+# Arquivos de inserção temporários
+insert_*.py
+*_insert.py
+
+# Arquivos de limpeza temporários
+limpar_*.py
+*_limpar.py
+
+# Arquivos SQL temporários
+*_temporario.sql
+temp_*.sql
+
+# Arquivos de backup
+*.bak
+*.backup
+*_backup.*
+
+# Arquivos de desenvolvimento
+dev_*.py
+*_dev.py
+development_*.py
+
+# Arquivos de exemplo
+*_example.*
+example_*
+
+# Arquivos de cache
+.cache/
+cache/
+
+# Arquivos de sessão
+*.session
+session_*
+
+# Arquivos de lock
+*.lock
+lock_*
+
+# Arquivos de dump
+*.dump
+dump_*
+
+# Arquivos de exportação temporários
+export_*.py
+*_export.py
+
+# Arquivos de importação temporários
+import_*.py
+*_import.py 

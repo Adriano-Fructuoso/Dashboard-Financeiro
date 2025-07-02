@@ -1,7 +1,7 @@
 """
 Módulo Core - Lógica de Negócio do Dashboard Financeiro
 Versão Otimizada - Performance e Eficiência Melhoradas
-Suporte a Google Sheets e CSV
+Suporte a PostgreSQL/Supabase
 """
 
 import pandas as pd
@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 import os
 from typing import Dict, List, Optional, Tuple, Union
 import logging
+from utils.database import DatabaseManager
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
@@ -18,80 +19,56 @@ logger = logging.getLogger(__name__)
 COLUNAS_PADRAO = ['Data', 'Descrição', 'Categoria', 'Tipo', 'Valor']
 TIPOS_VALIDOS = ['Receita', 'Despesa']
 
-# Configuração do backend de dados
-USE_GOOGLE_SHEETS = os.getenv('USE_GOOGLE_SHEETS', 'false').lower() == 'true'
-GOOGLE_SPREADSHEET_ID = os.getenv('GOOGLE_SPREADSHEET_ID', '')
-GOOGLE_SHEET_NAME = os.getenv('GOOGLE_SHEET_NAME', 'Lancamentos')
-
 class FinanceiroError(Exception):
     """Exceção personalizada para erros financeiros"""
     pass
 
 def carregar_dados(data_path: Optional[str] = None, usuario: Optional[str] = None) -> pd.DataFrame:
     """
-    Carrega dados financeiros do arquivo CSV ou Google Sheets com validação.
+    Carrega dados financeiros do banco de dados PostgreSQL.
     
     Args:
-        data_path: Caminho para o arquivo CSV (opcional se usando Google Sheets)
-        usuario: Nome do usuário para usar como nome da aba no Google Sheets
+        data_path: Caminho para o arquivo CSV (mantido para compatibilidade, mas não usado)
+        usuario: Nome do usuário para buscar dados específicos
         
     Returns:
         DataFrame pandas com os dados financeiros
     """
     try:
-        if USE_GOOGLE_SHEETS and GOOGLE_SPREADSHEET_ID:
-            logger.info(f"Carregando dados do Google Sheets: {GOOGLE_SPREADSHEET_ID}")
-            try:
-                from utils.google_sheets import read_sheet_as_dataframe, ensure_user_sheet_exists
-                
-                # Usar nome do usuário como nome da aba, ou padrão se não fornecido
-                sheet_name = usuario if usuario else GOOGLE_SHEET_NAME
-                logger.info(f"Usando aba: '{sheet_name}' para usuário: '{usuario}'")
-                
-                # Garantir que a aba existe
-                ensure_user_sheet_exists(GOOGLE_SPREADSHEET_ID, sheet_name)
-                
-                df = read_sheet_as_dataframe(GOOGLE_SPREADSHEET_ID, sheet_name)
-                logger.info(f"Dados carregados do Google Sheets (aba {sheet_name}): {len(df)} registros")
-            except ImportError:
-                logger.warning("Módulo Google Sheets não disponível, usando CSV")
-                df = _carregar_csv(data_path)
-            except Exception as e:
-                logger.error(f"Erro ao carregar do Google Sheets: {e}")
-                logger.info("Fallback para CSV")
-                df = _carregar_csv(data_path)
-        else:
-            logger.info(f"Usando CSV: {data_path}")
-            df = _carregar_csv(data_path)
-        
-        # Validar estrutura do DataFrame
-        if not all(col in df.columns for col in COLUNAS_PADRAO):
-            logger.warning("Estrutura do arquivo inválida. Criando novo DataFrame.")
+        if not usuario:
+            logger.warning("Usuário não fornecido, retornando DataFrame vazio")
             return criar_dataframe_vazio()
         
-        # Validar tipos de dados
-        df = validar_e_corrigir_dados(df)
-        
-        return df
+        with DatabaseManager() as db:
+            # Buscar usuário pelo nome
+            user_data = db.get_user_by_name(usuario)
+            if not user_data:
+                logger.warning(f"Usuário '{usuario}' não encontrado")
+                return criar_dataframe_vazio()
+            
+            # Buscar lançamentos do usuário
+            df = db.get_lancamentos_by_user(user_data['id'])
+            
+            # Renomear colunas para manter compatibilidade
+            if not df.empty:
+                df = df.rename(columns={
+                    'data': 'Data',
+                    'descricao': 'Descrição',
+                    'categoria': 'Categoria',
+                    'tipo': 'Tipo',
+                    'valor': 'Valor'
+                })
+            
+            logger.info(f"Dados carregados do banco para usuário '{usuario}': {len(df)} registros")
+            return df
             
     except Exception as e:
         logger.error(f"Erro ao carregar dados: {e}")
         return criar_dataframe_vazio()
 
-def _carregar_csv(data_path: Optional[str]) -> pd.DataFrame:
-    """Carrega dados do arquivo CSV"""
-    if data_path and os.path.exists(data_path):
-        logger.info(f"Carregando dados de: {data_path}")
-        df = pd.read_csv(data_path, parse_dates=['Data'])
-        logger.info(f"Dados carregados com sucesso: {len(df)} registros")
-        return df
-    else:
-        logger.info("Arquivo não existe. Criando DataFrame vazio.")
-        return criar_dataframe_vazio()
-
 def criar_dataframe_vazio() -> pd.DataFrame:
     """Cria um DataFrame vazio com estrutura padrão"""
-    return pd.DataFrame(columns=COLUNAS_PADRAO)
+    return pd.DataFrame(columns=pd.Index(COLUNAS_PADRAO))
 
 def validar_e_corrigir_dados(df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -125,223 +102,194 @@ def validar_e_corrigir_dados(df: pd.DataFrame) -> pd.DataFrame:
 
 def salvar_dados(df: pd.DataFrame, data_path: Optional[str] = None, usuario: Optional[str] = None) -> bool:
     """
-    Salva DataFrame no arquivo CSV ou Google Sheets com validação.
+    Salva DataFrame no banco de dados PostgreSQL.
     
     Args:
-        df: DataFrame a ser salvo
-        data_path: Caminho do arquivo (opcional se usando Google Sheets)
-        usuario: Nome do usuário para usar como nome da aba no Google Sheets
+        df: DataFrame a ser salvo (não usado diretamente, mantido para compatibilidade)
+        data_path: Caminho do arquivo (não usado, mantido para compatibilidade)
+        usuario: Nome do usuário
         
     Returns:
         True se salvou com sucesso, False caso contrário
     """
     try:
-        # Validar DataFrame antes de salvar
-        if not isinstance(df, pd.DataFrame):
-            raise FinanceiroError("Dados inválidos: não é um DataFrame")
+        if not usuario:
+            raise FinanceiroError("Usuário não fornecido")
         
-        if not all(col in df.columns for col in COLUNAS_PADRAO):
-            raise FinanceiroError("Estrutura do DataFrame inválida")
-        
-        if USE_GOOGLE_SHEETS and GOOGLE_SPREADSHEET_ID:
-            logger.info(f"Salvando dados no Google Sheets: {GOOGLE_SPREADSHEET_ID}")
-            try:
-                from utils.google_sheets import write_dataframe_to_sheet, ensure_user_sheet_exists
-                
-                # Usar nome do usuário como nome da aba, ou padrão se não fornecido
-                sheet_name = usuario if usuario else GOOGLE_SHEET_NAME
-                
-                # Garantir que a aba existe
-                ensure_user_sheet_exists(GOOGLE_SPREADSHEET_ID, sheet_name)
-                
-                write_dataframe_to_sheet(df, GOOGLE_SPREADSHEET_ID, sheet_name)
-                logger.info(f"Dados salvos no Google Sheets (aba {sheet_name}) com sucesso: {len(df)} registros")
-                return True
-            except ImportError:
-                logger.warning("Módulo Google Sheets não disponível, salvando em CSV")
-                return _salvar_csv(df, data_path)
-            except Exception as e:
-                logger.error(f"Erro ao salvar no Google Sheets: {e}")
-                logger.info("Fallback para CSV")
-                return _salvar_csv(df, data_path)
-        else:
-            return _salvar_csv(df, data_path)
+        with DatabaseManager() as db:
+            # Buscar usuário pelo nome
+            user_data = db.get_user_by_name(usuario)
+            if not user_data:
+                raise FinanceiroError(f"Usuário '{usuario}' não encontrado")
+            
+            logger.info(f"Dados já estão salvos no banco para usuário '{usuario}'")
+            return True
             
     except Exception as e:
         logger.error(f"Erro ao salvar dados: {e}")
         raise FinanceiroError(f"Erro ao salvar dados: {e}")
 
-def _salvar_csv(df: pd.DataFrame, data_path: Optional[str]) -> bool:
-    """Salva DataFrame no arquivo CSV"""
-    if not data_path:
-        logger.error("Caminho do arquivo não fornecido")
-        return False
-        
-    try:
-        # Garantir que o diretório existe
-        os.makedirs(os.path.dirname(data_path), exist_ok=True)
-        
-        # Salvar o DataFrame
-        df.to_csv(data_path, index=False)
-        
-        # Verificar se o arquivo foi criado
-        if os.path.exists(data_path):
-            logger.info(f"Dados salvos com sucesso em: {data_path}")
-            logger.info(f"Total de registros salvos: {len(df)}")
-            return True
-        else:
-            logger.error(f"Arquivo não foi criado em: {data_path}")
-            return False
-            
-    except Exception as e:
-        logger.error(f"Erro ao salvar CSV: {e}")
-        return False
-
 def validar_lancamento(data: Union[str, datetime], descricao: str, categoria: str, 
-                      tipo: str, valor: Union[str, float]) -> Dict:
+                      tipo: str, valor: Union[str, float]) -> Tuple[bool, str]:
     """
-    Valida dados de um lançamento antes de adicionar.
+    Valida dados de um lançamento financeiro.
     
     Args:
         data: Data do lançamento
         descricao: Descrição do lançamento
         categoria: Categoria do lançamento
-        tipo: Tipo (Receita/Despesa)
+        tipo: Tipo (Receita ou Despesa)
         valor: Valor do lançamento
         
     Returns:
-        Dicionário com dados validados
-        
-    Raises:
-        FinanceiroError: Se os dados são inválidos
+        Tupla (é_válido, mensagem_erro)
     """
-    # Validar data
     try:
-        data_validada = pd.to_datetime(data)
-        if data_validada > datetime.now() + timedelta(days=1):  # Permite lançamentos futuros de até 1 dia
-            raise FinanceiroError("Data não pode ser muito futura")
-    except:
-        raise FinanceiroError("Data inválida")
-    
-    # Validar descrição
-    if not descricao or not descricao.strip():
-        raise FinanceiroError("Descrição é obrigatória")
-    
-    # Validar categoria
-    if not categoria or not categoria.strip():
-        raise FinanceiroError("Categoria é obrigatória")
-    
-    # Validar tipo
-    if tipo not in TIPOS_VALIDOS:
-        raise FinanceiroError(f"Tipo deve ser um dos seguintes: {TIPOS_VALIDOS}")
-    
-    # Validar valor
-    try:
-        valor_validado = float(valor)
-        if valor_validado <= 0:
-            raise FinanceiroError("Valor deve ser maior que zero")
-    except:
-        raise FinanceiroError("Valor inválido")
-    
-    return {
-        'Data': data_validada,
-        'Descrição': descricao.strip(),
-        'Categoria': categoria.strip(),
-        'Tipo': tipo,
-        'Valor': valor_validado
-    }
+        # Validar data
+        if isinstance(data, str):
+            datetime.strptime(data, '%Y-%m-%d')
+        elif not isinstance(data, datetime):
+            return False, "Data inválida"
+        
+        # Validar descrição
+        if not descricao or len(descricao.strip()) == 0:
+            return False, "Descrição é obrigatória"
+        
+        # Validar categoria
+        if not categoria or len(categoria.strip()) == 0:
+            return False, "Categoria é obrigatória"
+        
+        # Validar tipo
+        if tipo not in TIPOS_VALIDOS:
+            return False, f"Tipo deve ser um dos seguintes: {', '.join(TIPOS_VALIDOS)}"
+        
+        # Validar valor
+        try:
+            valor_float = float(valor)
+            if valor_float < 0:
+                return False, "Valor deve ser positivo"
+        except (ValueError, TypeError):
+            return False, "Valor deve ser um número válido"
+        
+        return True, ""
+        
+    except Exception as e:
+        return False, f"Erro na validação: {str(e)}"
 
 def adicionar_lancamento(data: Union[str, datetime], descricao: str, categoria: str, 
                         tipo: str, valor: Union[str, float], data_path: Optional[str] = None, 
                         usuario: Optional[str] = None) -> bool:
     """
-    Adiciona um novo lançamento com validação completa.
+    Adiciona um novo lançamento financeiro ao banco de dados.
     
     Args:
         data: Data do lançamento
         descricao: Descrição do lançamento
         categoria: Categoria do lançamento
-        tipo: Tipo (Receita/Despesa)
+        tipo: Tipo (Receita ou Despesa)
         valor: Valor do lançamento
-        data_path: Caminho do arquivo CSV (opcional se usando Google Sheets)
-        usuario: Nome do usuário para usar como nome da aba no Google Sheets
+        data_path: Caminho do arquivo (não usado, mantido para compatibilidade)
+        usuario: Nome do usuário
         
     Returns:
-        True se adicionou com sucesso
-        
-    Raises:
-        FinanceiroError: Se os dados são inválidos
+        True se adicionou com sucesso, False caso contrário
     """
     try:
+        if not usuario:
+            raise FinanceiroError("Usuário não fornecido")
+        
         # Validar dados
-        dados_validados = validar_lancamento(data, descricao, categoria, tipo, valor)
+        is_valid, error_msg = validar_lancamento(data, descricao, categoria, tipo, valor)
+        if not is_valid:
+            raise FinanceiroError(error_msg)
         
-        logger.info(f"Adicionando lançamento: {dados_validados['Descrição']} - {dados_validados['Categoria']} - {dados_validados['Tipo']} - R$ {dados_validados['Valor']}")
-        
-        # Carregar dados existentes
-        df = carregar_dados(data_path, usuario)
-        
-        # Adicionar novo lançamento
-        novo_registro = pd.DataFrame([dados_validados])
-        df = pd.concat([df, novo_registro], ignore_index=True)
-        
-        # Salvar dados
-        if salvar_dados(df, data_path, usuario):
-            logger.info("Lançamento adicionado com sucesso!")
-            return True
+        # Converter data para string se necessário
+        if isinstance(data, datetime):
+            data_str = data.strftime('%Y-%m-%d')
         else:
-            raise FinanceiroError("Erro ao salvar dados")
+            data_str = str(data)
         
+        # Converter valor para float
+        valor_float = float(valor)
+        
+        with DatabaseManager() as db:
+            # Buscar usuário pelo nome
+            user_data = db.get_user_by_name(usuario)
+            if not user_data:
+                raise FinanceiroError(f"Usuário '{usuario}' não encontrado")
+            
+            # Adicionar lançamento
+            success = db.add_lancamento(
+                user_data['id'], data_str, descricao, categoria, tipo, valor_float
+            )
+            
+            if success:
+                logger.info(f"Lançamento adicionado com sucesso para usuário '{usuario}'")
+                return True
+            else:
+                raise FinanceiroError("Erro ao adicionar lançamento no banco")
+                
     except Exception as e:
         logger.error(f"Erro ao adicionar lançamento: {e}")
         raise FinanceiroError(f"Erro ao adicionar lançamento: {e}")
 
 def listar_lancamentos(data_path: Optional[str] = None, usuario: Optional[str] = None) -> pd.DataFrame:
     """
-    Retorna todos os lançamentos como DataFrame.
+    Lista todos os lançamentos de um usuário.
     
     Args:
-        data_path: Caminho do arquivo CSV (opcional se usando Google Sheets)
-        usuario: Nome do usuário para usar como nome da aba no Google Sheets
+        data_path: Caminho do arquivo (não usado, mantido para compatibilidade)
+        usuario: Nome do usuário
         
     Returns:
-        DataFrame com todos os lançamentos
+        DataFrame com os lançamentos
     """
     return carregar_dados(data_path, usuario)
 
 def remover_lancamento(indice: int, data_path: Optional[str] = None, usuario: Optional[str] = None) -> bool:
     """
-    Remove um lançamento pelo índice com validação.
+    Remove um lançamento pelo índice.
     
     Args:
-        indice: Índice do lançamento a ser removido
-        data_path: Caminho do arquivo CSV (opcional se usando Google Sheets)
-        usuario: Nome do usuário para usar como nome da aba no Google Sheets
+        indice: Índice do lançamento (não usado diretamente, mantido para compatibilidade)
+        data_path: Caminho do arquivo (não usado, mantido para compatibilidade)
+        usuario: Nome do usuário
         
     Returns:
-        True se removeu com sucesso
-        
-    Raises:
-        FinanceiroError: Se o índice é inválido
+        True se removeu com sucesso, False caso contrário
     """
     try:
-        logger.info(f"Removendo lançamento no índice: {indice}")
+        if not usuario:
+            raise FinanceiroError("Usuário não fornecido")
         
+        # Para manter compatibilidade, vamos buscar o lançamento pelo índice
+        # Primeiro, carregar todos os lançamentos
         df = carregar_dados(data_path, usuario)
         
-        if indice < 0 or indice >= len(df):
-            raise FinanceiroError(f"Índice {indice} inválido. Total de registros: {len(df)}")
+        if df.empty or indice >= len(df):
+            raise FinanceiroError("Índice inválido")
         
-        # Remover lançamento
-        df = df.drop(indice).reset_index(drop=True)
-        
-        # Salvar dados
-        if salvar_dados(df, data_path, usuario):
-            logger.info(f"Lançamento removido. Novo total: {len(df)} registros")
-            return True
-        else:
-            raise FinanceiroError("Erro ao salvar dados após remoção")
+        # Buscar o ID do lançamento no banco
+        with DatabaseManager() as db:
+            user_data = db.get_user_by_name(usuario)
+            if not user_data:
+                raise FinanceiroError(f"Usuário '{usuario}' não encontrado")
             
+            # Buscar todos os lançamentos ordenados por data (mais recente primeiro)
+            lancamentos = db.filter_lancamentos(user_data['id'])
+            
+            if indice < len(lancamentos):
+                lancamento_id = lancamentos.iloc[indice]['id']
+                success = db.delete_lancamento(lancamento_id)
+                
+                if success:
+                    logger.info(f"Lançamento {lancamento_id} removido com sucesso")
+                    return True
+                else:
+                    raise FinanceiroError("Erro ao remover lançamento no banco")
+            else:
+                raise FinanceiroError("Índice inválido")
+                
     except Exception as e:
         logger.error(f"Erro ao remover lançamento: {e}")
         raise FinanceiroError(f"Erro ao remover lançamento: {e}")
@@ -350,47 +298,61 @@ def editar_lancamento(indice: int, data: Union[str, datetime], descricao: str,
                      categoria: str, tipo: str, valor: Union[str, float], data_path: Optional[str] = None,
                      usuario: Optional[str] = None) -> bool:
     """
-    Edita um lançamento existente com validação completa.
+    Edita um lançamento existente.
     
     Args:
-        indice: Índice do lançamento a ser editado
-        data: Nova data
-        descricao: Nova descrição
-        categoria: Nova categoria
-        tipo: Novo tipo
-        valor: Novo valor
-        data_path: Caminho do arquivo CSV (opcional se usando Google Sheets)
-        usuario: Nome do usuário para usar como nome da aba no Google Sheets
+        indice: Índice do lançamento
+        data: Nova data do lançamento
+        descricao: Nova descrição do lançamento
+        categoria: Nova categoria do lançamento
+        tipo: Novo tipo (Receita ou Despesa)
+        valor: Novo valor do lançamento
+        data_path: Caminho do arquivo (não usado, mantido para compatibilidade)
+        usuario: Nome do usuário
         
     Returns:
-        True se editou com sucesso
-        
-    Raises:
-        FinanceiroError: Se os dados são inválidos
+        True se editou com sucesso, False caso contrário
     """
     try:
+        if not usuario:
+            raise FinanceiroError("Usuário não fornecido")
+        
         # Validar dados
-        dados_validados = validar_lancamento(data, descricao, categoria, tipo, valor)
+        is_valid, error_msg = validar_lancamento(data, descricao, categoria, tipo, valor)
+        if not is_valid:
+            raise FinanceiroError(error_msg)
         
-        logger.info(f"Editando lançamento no índice: {indice}")
-        logger.info(f"Novos dados: {dados_validados['Descrição']} - {dados_validados['Categoria']} - {dados_validados['Tipo']} - R$ {dados_validados['Valor']}")
-        
-        df = carregar_dados(data_path, usuario)
-        
-        if indice < 0 or indice >= len(df):
-            raise FinanceiroError(f"Índice {indice} inválido. Total de registros: {len(df)}")
-        
-        # Atualizar dados
-        for col, valor in dados_validados.items():
-            df.at[indice, col] = valor
-        
-        # Salvar dados
-        if salvar_dados(df, data_path, usuario):
-            logger.info(f"Lançamento editado. Total de registros: {len(df)}")
-            return True
+        # Converter data para string se necessário
+        if isinstance(data, datetime):
+            data_str = data.strftime('%Y-%m-%d')
         else:
-            raise FinanceiroError("Erro ao salvar dados após edição")
+            data_str = str(data)
+        
+        # Converter valor para float
+        valor_float = float(valor)
+        
+        with DatabaseManager() as db:
+            user_data = db.get_user_by_name(usuario)
+            if not user_data:
+                raise FinanceiroError(f"Usuário '{usuario}' não encontrado")
             
+            # Buscar todos os lançamentos ordenados por data (mais recente primeiro)
+            lancamentos = db.filter_lancamentos(user_data['id'])
+            
+            if indice < len(lancamentos):
+                lancamento_id = lancamentos.iloc[indice]['id']
+                success = db.update_lancamento(
+                    lancamento_id, data_str, descricao, categoria, tipo, valor_float
+                )
+                
+                if success:
+                    logger.info(f"Lançamento {lancamento_id} editado com sucesso")
+                    return True
+                else:
+                    raise FinanceiroError("Erro ao editar lançamento no banco")
+            else:
+                raise FinanceiroError("Índice inválido")
+                
     except Exception as e:
         logger.error(f"Erro ao editar lançamento: {e}")
         raise FinanceiroError(f"Erro ao editar lançamento: {e}")
@@ -401,38 +363,94 @@ def filtrar_por_categoria(categoria: str, data_path: Optional[str] = None, usuar
     
     Args:
         categoria: Categoria para filtrar
-        data_path: Caminho do arquivo CSV (opcional se usando Google Sheets)
-        usuario: Nome do usuário para usar como nome da aba no Google Sheets
+        data_path: Caminho do arquivo (não usado, mantido para compatibilidade)
+        usuario: Nome do usuário
         
     Returns:
         DataFrame filtrado
     """
-    df = carregar_dados(data_path, usuario)
-    return df[df['Categoria'] == categoria]
+    try:
+        if not usuario:
+            return pd.DataFrame(columns=pd.Index(COLUNAS_PADRAO))
+        
+        with DatabaseManager() as db:
+            user_data = db.get_user_by_name(usuario)
+            if not user_data:
+                return pd.DataFrame(columns=pd.Index(COLUNAS_PADRAO))
+            
+            df = db.filter_lancamentos(user_data['id'], categoria=categoria)
+            
+            # Renomear colunas para manter compatibilidade
+            if not df.empty:
+                df = df.rename(columns={
+                    'data': 'Data',
+                    'descricao': 'Descrição',
+                    'categoria': 'Categoria',
+                    'tipo': 'Tipo',
+                    'valor': 'Valor'
+                })
+            
+            return df
+            
+    except Exception as e:
+        logger.error(f"Erro ao filtrar por categoria: {e}")
+        return pd.DataFrame(columns=pd.Index(COLUNAS_PADRAO))
 
 def buscar_por_periodo(data_inicio: Union[str, datetime], data_fim: Union[str, datetime], 
                       data_path: Optional[str] = None, usuario: Optional[str] = None) -> pd.DataFrame:
     """
-    Filtra lançamentos por período.
+    Busca lançamentos por período.
     
     Args:
-        data_inicio: Data de início
-        data_fim: Data de fim
-        data_path: Caminho do arquivo CSV (opcional se usando Google Sheets)
-        usuario: Nome do usuário para usar como nome da aba no Google Sheets
+        data_inicio: Data de início do período
+        data_fim: Data de fim do período
+        data_path: Caminho do arquivo (não usado, mantido para compatibilidade)
+        usuario: Nome do usuário
         
     Returns:
         DataFrame filtrado
     """
-    df = carregar_dados(data_path, usuario)
-    
-    # Converter datas
-    data_inicio = pd.to_datetime(data_inicio)
-    data_fim = pd.to_datetime(data_fim)
-    
-    # Filtrar por período
-    mask = (df['Data'] >= data_inicio) & (df['Data'] <= data_fim)
-    return df[mask]
+    try:
+        if not usuario:
+            return pd.DataFrame(columns=pd.Index(COLUNAS_PADRAO))
+        
+        # Converter datas para string se necessário
+        if isinstance(data_inicio, datetime):
+            data_inicio_str = data_inicio.strftime('%Y-%m-%d')
+        else:
+            data_inicio_str = str(data_inicio)
+        
+        if isinstance(data_fim, datetime):
+            data_fim_str = data_fim.strftime('%Y-%m-%d')
+        else:
+            data_fim_str = str(data_fim)
+        
+        with DatabaseManager() as db:
+            user_data = db.get_user_by_name(usuario)
+            if not user_data:
+                return pd.DataFrame(columns=pd.Index(COLUNAS_PADRAO))
+            
+            df = db.filter_lancamentos(
+                user_data['id'], 
+                data_inicio=data_inicio_str, 
+                data_fim=data_fim_str
+            )
+            
+            # Renomear colunas para manter compatibilidade
+            if not df.empty:
+                df = df.rename(columns={
+                    'data': 'Data',
+                    'descricao': 'Descrição',
+                    'categoria': 'Categoria',
+                    'tipo': 'Tipo',
+                    'valor': 'Valor'
+                })
+            
+            return df
+            
+    except Exception as e:
+        logger.error(f"Erro ao buscar por período: {e}")
+        return pd.DataFrame(columns=pd.Index(COLUNAS_PADRAO))
 
 def calcular_somatorio_geral(df: pd.DataFrame) -> Dict[str, float]:
     """
