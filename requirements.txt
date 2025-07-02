@@ -24,3 +24,6 @@ pytz>=2023.3
 plotly>=5.15.0
 psycopg2-binary>=2.9.0
 python-dotenv>=1.0.0
+
+# Supabase - Cliente oficial
+supabase>=2.0.0
