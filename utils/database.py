@@ -27,7 +27,12 @@ class DatabaseManager:
         """Estabelece conexão com o banco de dados"""
         try:
             # Importar configurações do config.py
-            from config import SUPABASE_URL, SUPABASE_KEY
+            from config import get_supabase_config
+            
+            # Obter configurações atualizadas
+            config = get_supabase_config()
+            SUPABASE_URL = config['SUPABASE_URL']
+            SUPABASE_KEY = config['SUPABASE_KEY']
             
             # Tentar conectar via Supabase primeiro
             if SUPABASE_URL and SUPABASE_KEY:
